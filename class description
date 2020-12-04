@@ -1,0 +1,155 @@
+class Node():
+    def __init__(self,val):
+        self.val=val
+        self.links=set()
+        self.parent=None
+
+class Tree():
+    def __init__(self,c,edges):
+        self.nodes=[]
+        for i in range(len(c)):
+            self.nodes.append(Node(c[i]))
+        self.nodes.append(Node(0))
+        edges.append([0,-1])
+        for edge in edges:
+            self.nodes[edge[0]].links.add(edge[1])
+            self.nodes[edge[1]].links.add(edge[0])
+            
+        self.del_links()
+        self.parent_child()
+        
+        self.arr=[[x,0] for x in range (len(self.nodes))]
+        self.sums()
+        
+        self.arr.sort(key=lambda x:x[1])
+        self.inv=[0]*len(self.arr)
+        for i in range(len(self.arr)):
+            self.inv[self.arr[i][0]]=i
+        
+        self.total=self.nodes[0].summ
+        self.added=10*self.total
+        self.cuts=None
+        
+        self.traverse()
+            
+    def del_links(self,node=0):
+        for link in self.nodes[node].links:
+            self.nodes[link].links.remove(node)
+            self.del_links(link)
+            
+    def parent_child(self,node=0):
+        for link in self.nodes[node].links:
+            self.nodes[link].parent=node
+            self.parent_child(link)
+            
+    def sums(self,node=0):
+        self.nodes[node].summ=self.nodes[node].val
+        self.arr[node][1]=self.nodes[node].val
+        for link in self.nodes[node].links:
+            self.nodes[node].summ+=self.sums(link)
+            self.arr[node][1]+=self.arr[link][1]
+        return self.nodes[node].summ
+    
+    def bin_search(self,tg):
+        if self.arr[0][1]==tg:
+            self.found=0
+            return True
+        l=0
+        r=len(self.arr)
+        while r-l>1:
+            mid=(l+r)//2
+            if self.arr[mid][1]==tg:
+                if self.sflag==0 or self.arr[mid][0]!=self.forb:
+                    self.found=mid
+                    return True
+                else:
+                    if self.arr[mid+1][1]==tg:
+                        self.found=mid+1
+                        return True
+                    elif self.arr[mid-1][1]==tg:
+                        self.found=mid-1
+                        return True
+                    else:
+                        return False
+            elif self.arr[mid][1]>tg:
+                r=mid
+            else:
+                l=mid
+        return False
+    
+    def check_parent(self,child,parent):
+        while child!=None:
+            if self.nodes[child].parent==parent:
+                return True
+            else:
+                child=self.nodes[child].parent
+        return False    
+            
+    def traverse(self,node=0):
+        for link in self.nodes[node].links:
+            self.traverse(link)
+            tmp=self.total-self.nodes[link].summ
+            self.sflag=0
+            if self.bin_search(self.nodes[link].summ):
+                del self.arr[self.found]
+            if self.nodes[link].summ > tmp:
+                continue
+            elif self.nodes[link].summ <= tmp//2 and tmp%2==1:
+                continue
+            elif tmp//2-self.nodes[link].summ>=self.added:
+                continue
+            elif self.nodes[link].summ <= tmp//2:
+                flag=0
+                cur=self.nodes[link].parent
+                while self.nodes[cur].parent!=None:
+                    if self.nodes[cur].summ==tmp//2+self.nodes[link].summ:
+                        self.added=tmp//2-self.nodes[link].summ
+                        self.cuts=(link,cur)
+                        flag=1
+                        break
+                    elif self.nodes[cur].summ==tmp//2:
+                        self.sflag=1
+                        self.forb=cur
+                        cur=self.nodes[cur].parent
+                    else:
+                        cur=self.nodes[cur].parent
+                if flag==0:
+                    if self.bin_search(tmp//2):
+                        self.added=tmp//2-self.nodes[link].summ
+                        self.cuts=(link,self.arr[self.found][0])
+                        flag=1
+            elif 3*self.nodes[link].summ-self.total>=self.added:
+                continue
+            elif self.nodes[link].summ > tmp//2:
+                flag=0
+                cur=self.nodes[link].parent
+                while self.nodes[cur].parent!=None:
+                    if self.nodes[cur].summ==2*self.nodes[link].summ or self.nodes[cur].summ==self.total-self.nodes[link].summ:
+                        self.added=3*self.nodes[link].summ-self.total
+                        self.cuts=(link,cur)
+                        flag=1
+                        break
+                    else:
+                        cur=self.nodes[cur].parent
+                if flag==0:
+                    if self.bin_search(self.nodes[link].summ):
+                        self.added=3*self.nodes[link].summ-self.total
+                        self.cuts=(link,self.arr[self.found][0])
+                    if self.bin_search(self.total-2*self.nodes[link].summ):
+                        self.added=3*self.nodes[link].summ-self.total
+                        self.cuts=(link,self.arr[self.found][0])
+                        
+              
+
+
+def balancedForest(c, edges):
+    
+    for edge in edges:
+        edge[0]-=1
+        edge[1]-=1
+        
+    tree=Tree(c,edges)
+    if tree.added==10*tree.total:
+        return -1
+    else:
+        return tree.added
